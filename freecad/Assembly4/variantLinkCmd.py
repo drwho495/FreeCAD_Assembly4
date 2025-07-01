@@ -46,11 +46,12 @@ class makeVariantLink:
 
     def IsActive(self):
         # we only insert variant links into assemblies and root parts
-        if Asm4.getAssembly() or Asm4.getSelectedRootPart():
+        if Asm4.getAssembly() or Asm4.getSelectedRootPart(includeCDContainer=True):
             return True
         # if an existing variant link is selected, we duplicate it
         if Asm4.getSelectedVarLink():
             return True
+
         return False
 
     """
@@ -120,22 +121,25 @@ class makeVariantLink:
         for doc in App.listDocuments().values():
             # don't consider temporary documents
             if not doc.Temporary:
-                for obj in doc.findObjects("App::Part"):
-                    # we don't want to link to itself to the 'Model' object
-                    # other App::Part in the same document are OK
-                    # but only those at top level (not nested inside other containers)
-                    if (
-                        obj != self.rootAssembly
-                        and obj.getParentGeoFeatureGroup() is None
-                    ):
-                        # and only those that have a Variables property container
-                        variables = obj.getObject("Variables")
+                for obj in doc.Objects:
+                    if obj.TypeId == "App::Part" or (hasattr(obj, "Type") and obj.Type == "PartContainer"):
+                        # we don't want to link to itself to the 'Model' object
+                        # other App::Part in the same document are OK
+                        # but only those at top level (not nested inside other containers)
                         if (
-                            hasattr(variables, "Type")
-                            and variables.Type == "App::PropertyContainer"
+                            obj != self.rootAssembly
+                            and obj.getParentGeoFeatureGroup() is None
                         ):
-                            self.allParts.append(obj)
-                            self.partsDoc.append(doc)
+                            # and only those that have a Variables property container
+                            variables = obj.getObject("Variables")
+                            if (
+                                hasattr(variables, "Type")
+                                and variables.Type == "App::PropertyContainer"
+                            ):
+                                self.allParts.append(obj)
+                                self.partsDoc.append(doc)
+                    else:
+                        print(f"{obj.Label} is invalid")
 
         # build the list
         for part in self.allParts:

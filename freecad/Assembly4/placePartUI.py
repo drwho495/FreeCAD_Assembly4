@@ -27,6 +27,7 @@ from freecad.Assembly4 import Asm4_libs as Asm4
 class placePartUI:
 
     def __init__(self):
+        print("run part place ui")
         self.form = QtGui.QWidget()
         iconFile = os.path.join(Asm4.iconPath, "Place_Link.svg")
         self.form.setWindowIcon(QtGui.QIcon(iconFile))
@@ -44,7 +45,7 @@ class placePartUI:
                 == "App::PropertyPlacement"
             )
         except:
-            Asm4.warningBox("Please select ab object with a Placement property")
+            Asm4.warningBox("Please select an object with a Placement property")
 
         # check where the fastener was attached to
         if hasattr(self.selectedObj, "AttachedTo"):
@@ -78,20 +79,20 @@ class placePartUI:
             )
 
         # find all the linked parts in the assembly
-        for obj in self.activeDoc.findObjects("App::Link"):
-            if self.rootAssembly.getObject(obj.Name) is not None and hasattr(
-                obj.LinkedObject, "isDerivedFrom"
-            ):
-                linkedObj = obj.LinkedObject
-                if linkedObj.isDerivedFrom("App::Part") or linkedObj.isDerivedFrom(
-                    "PartDesign::Body"
+        for obj in self.activeDoc.Objects:
+            if hasattr(obj, "LinkedObject"):
+                if self.rootAssembly.getObject(obj.Name) is not None and hasattr(
+                    obj.LinkedObject, "isDerivedFrom"
                 ):
-                    # add to the object table holding the objects ...
-                    self.parentTable.append(obj)
-                    # ... and add to the drop-down combo box with the assembly tree's parts
-                    objIcon = linkedObj.ViewObject.Icon
-                    objText = Asm4.labelName(obj)
-                    self.parentList.addItem(objIcon, objText, obj)
+                    linkedObj = obj.LinkedObject
+                    if Asm4.isValidContainer(linkedObj):
+                        # ... except if it's the selected link itself
+                        if obj != self.selectedObj:
+                            self.parentTable.append(obj)
+                            # add to the drop-down combo box with the assembly tree's parts
+                            objIcon = linkedObj.ViewObject.Icon
+                            objText = Asm4.labelName(obj)
+                            self.parentList.addItem(objIcon, objText, obj)
 
         # find the oldPart in the part list...
         parent_index = 1
@@ -376,7 +377,7 @@ class placePartUI:
             if idx >= 0:
                 self.parentList.setCurrentIndex(idx)
             # else it might be an LCS in the root assembly
-            elif selLink.TypeId in Asm4.datumTypes:
+            elif Asm4.isValidDatum(selObj):
                 self.parentList.setCurrentIndex(1)
             # this has triggered to fill the LCS list
             found = self.attLCSlist.findItems(

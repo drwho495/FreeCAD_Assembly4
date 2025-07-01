@@ -81,6 +81,27 @@ def getSelectionPath(docName, objName, subObjName):
     +-----------------------------------------------+
 """
 
+def sortForLinkObjects(docObjects, assembly, selectedObj, parentTable, parentList):
+    """
+        Returns `parentTable`, `parentList`
+    """
+
+    for obj in docObjects:
+        if hasattr(obj, "LinkedObject"):
+            if assembly.getObject(obj.Name) is not None and hasattr(
+                obj.LinkedObject, "isDerivedFrom"
+            ):
+                linkedObj = obj.LinkedObject
+                if isValidContainer(linkedObj):
+                    # ... except if it's the selected link itself
+                    if obj != selectedObj:
+                        parentTable.append(obj)
+                        # add to the drop-down combo box with the assembly tree's parts
+                        objIcon = linkedObj.ViewObject.Icon
+                        objText = labelName(obj)
+                        parentList.addItem(objIcon, objText, obj)
+
+    return parentTable, parentList
 
 def cloneObject(obj):
     container = obj.getParentGeoFeatureGroup()
@@ -337,7 +358,8 @@ def getPartLCS(part):
         # get the proper objects
         # all object names end with a "." , this needs to be removed
         obj = part.getObject(objName[0:-1])
-        if obj.TypeId in datumTypes:
+        if obj.TypeId in datumTypes or (hasattr(obj, "Type") and (obj.Type == "ExposedGeometry")):
+            print(f"add part: {objName}")
             partLCS.append(obj)
         elif obj.TypeId == "App::DocumentObjectGroup":
             datums = getPartLCS(obj)
@@ -438,6 +460,14 @@ def placementEE(EE):
     +-----------------------------------------------+
 """
 
+def isValidDatum(obj):
+    return (obj.TypeId in datumTypes or (hasattr(obj, "Type") and obj.Type == "Boundary"))
+
+def isValidContainer(obj, additionalTypes = []):
+    types = containerTypes
+    types.extend(additionalTypes)
+
+    return obj.TypeId in types or (hasattr(obj, "Type") and (obj.Type == "PartContainer" or obj.Type == "Asm4::VariantLink"))
 
 def isVector(vect):
     if isinstance(vect, App.Vector):
@@ -705,14 +735,18 @@ def makeExpressionDatum(attLink, attPart, attLCS):
 
 
 # checks whether an App::Part is selected, and that it's at the root of the document
-def getSelectedRootPart():
+def getSelectedRootPart(includeCDContainer=False):
     retval = None
     selection = Gui.Selection.getSelection()
     if len(selection) == 1:
         selObj = selection[0]
         # only consider App::Parts at the root of the document
-        if selObj.TypeId == "App::Part" and selObj.getParentGeoFeatureGroup() is None:
-            retval = selObj
+        if includeCDContainer:
+            if (selObj.TypeId == "App::Part" or (hasattr(selObj, "Type") and selObj.Type == "PartContainer")) and selObj.getParentGeoFeatureGroup() is None:
+                retval = selObj
+        else:
+            if selObj.TypeId == "App::Part" and selObj.getParentGeoFeatureGroup() is None:
+                retval = selObj
     return retval
 
 
@@ -736,7 +770,7 @@ def getSelectedLink():
         if (
             selObj.isDerivedFrom("App::Link")
             and selObj.LinkedObject is not None
-            and selObj.LinkedObject.TypeId in containerTypes
+            and (selObj.LinkedObject.TypeId in containerTypes or hasattr(selObj, "Type") and (selObj.Type == "PartContainer"))
         ):
             retval = selObj
     return retval

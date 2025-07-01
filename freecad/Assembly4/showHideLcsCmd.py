@@ -104,7 +104,7 @@ def showHide(show):
 def showChildLCSs(obj, show, processedLinks):
     # global processedLinks
     # if its a datum apply the visibility
-    if obj.TypeId in Asm4.datumTypes:
+    if Asm4.isValidDatum(obj):
         obj.Visibility = show
     # if it's a link, look for subObjects
     elif obj.TypeId == "App::Link" and obj.Name not in processedLinks:
@@ -113,7 +113,7 @@ def showChildLCSs(obj, show, processedLinks):
             linkedObj = obj.LinkedObject.Document.getObject(objName[0:-1])
             showChildLCSs(linkedObj, show, processedLinks)
     # if it's a container or a group
-    elif obj.TypeId in Asm4.containerTypes or obj.TypeId == "App::DocumentObjectGroup":
+    elif Asm4.isValidContainer(obj, ["App::DocumentObjectGroup"]):
         for subObjName in obj.getSubObjects(1):
             subObj = obj.getSubObject(subObjName, 1)  # 1 for returning the real object
             if subObj != None:

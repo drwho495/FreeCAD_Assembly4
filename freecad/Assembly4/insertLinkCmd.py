@@ -173,6 +173,7 @@ class insertLink:
                 docTemporary = False
 
             if not docTemporary:
+                """
                 for obj in doc.findObjects("App::Part"):
                     # we don't want to link to itself to the 'Model' object
                     # other App::Part in the same document are OK
@@ -189,6 +190,17 @@ class insertLink:
                     if obj.getParentGeoFeatureGroup() is None:
                         self.allParts.append(obj)
                         self.partsDoc.append(doc)
+                """
+                # do one big for loop for all the items instead of three (you would need another for a ConstraintDesign Part)
+                for obj in doc.Objects:
+                    if Asm4.isValidContainer(obj):
+                        if (
+                            obj != self.rootAssembly
+                            and obj.getParentGeoFeatureGroup() is None
+                        ):
+                            self.allParts.append(obj)
+                            self.partsDoc.append(doc)
+
         # build the list
         self.partList.clear()
         for part in self.allParts:

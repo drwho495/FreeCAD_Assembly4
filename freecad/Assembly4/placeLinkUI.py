@@ -43,6 +43,7 @@ LineHighlight = (1.0, 1.0, 0.0, 0.0)
 class placeLinkUI:
 
     def __init__(self):
+        print("run place link")
         # remove selectionFilter
         self.selectionFilterStatus = selectionFilter.observerStatus()
         selectionFilter.observerDisable()
@@ -173,21 +174,20 @@ class placeLinkUI:
                     self.partLCSlist.setCurrentItem(firstLCSItem)
 
         # find all the linked parts in the assembly
-        for obj in self.activeDoc.findObjects("App::Link"):
-            if self.rootAssembly.getObject(obj.Name) is not None and hasattr(
-                obj.LinkedObject, "isDerivedFrom"
-            ):
-                linkedObj = obj.LinkedObject
-                if linkedObj.isDerivedFrom("App::Part") or linkedObj.isDerivedFrom(
-                    "PartDesign::Body"
+        for obj in self.activeDoc.Objects:
+            if hasattr(obj, "LinkedObject"):
+                if self.rootAssembly.getObject(obj.Name) is not None and hasattr(
+                    obj.LinkedObject, "isDerivedFrom"
                 ):
-                    # ... except if it's the selected link itself
-                    if obj != self.selectedObj:
-                        self.parentTable.append(obj)
-                        # add to the drop-down combo box with the assembly tree's parts
-                        objIcon = linkedObj.ViewObject.Icon
-                        objText = Asm4.labelName(obj)
-                        self.parentList.addItem(objIcon, objText, obj)
+                    linkedObj = obj.LinkedObject
+                    if Asm4.isValidContainer(linkedObj):
+                        # ... except if it's the selected link itself
+                        if obj != self.selectedObj:
+                            self.parentTable.append(obj)
+                            # add to the drop-down combo box with the assembly tree's parts
+                            objIcon = linkedObj.ViewObject.Icon
+                            objText = Asm4.labelName(obj)
+                            self.parentList.addItem(objIcon, objText, obj)
 
         # find the oldPart in the part list...
         parent_index = 1
@@ -473,7 +473,7 @@ class placeLinkUI:
         selPath = Asm4.getSelectionPath(doc, obj, sub)
 
         # check that a datum object is selected
-        if selObj.TypeId in Asm4.datumTypes and len(selPath) > 2:
+        if Asm4.isValidDatum(selObj) and len(selPath) > 2: #todo: fix
             selLink = self.activeDoc.getObject(selPath[2])
             # if it's the selected link to be placed:
             if selLink == self.selectedObj:

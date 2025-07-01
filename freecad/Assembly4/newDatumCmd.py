@@ -84,13 +84,13 @@ class newDatum:
             # ... and it's an App::Part or an datum object
             selType = selectedObj.TypeId
             if (
-                selType in self.containers
-                or selType in Asm4.datumTypes
+                Asm4.isValidContainer(selectedObj, "App::DocumentObjectGroup")
+                or Asm4.isValidDatum(selectedObj)
                 or selType == "Sketcher::SketchObject"
             ):
                 return selectedObj
             # When the selected item is a feature of a Body, it returns the Body itself.
-            elif selectedObj.getParentGeoFeatureGroup().TypeId in Asm4.containerTypes:
+            elif Asm4.isValidContainer(selectedObj.getParentGeoFeatureGroup().TypeId):
                 return selectedObj.getParentGeoFeatureGroup()
         # or if nothing is selected ...
         elif Asm4.getAssembly():
@@ -113,16 +113,16 @@ class newDatum:
 
         parentContainer = None
         # check whether we have selected a container
-        if selectedObj.TypeId in self.containers:
+        if Asm4.isValidContainer(selectedObj):
             parentContainer = selectedObj
         # if a datum object is selected
         elif (
-            selectedObj.TypeId in Asm4.datumTypes
+            Asm4.isValidDatum(selectedObj)
             or selectedObj.TypeId == "Sketcher::SketchObject"
         ):
             # see whether it's in a container
             parent = selectedObj.getParentGeoFeatureGroup()
-            if parent.TypeId in self.containers:
+            if Asm4.isValidContainer(selectedObj):
                 parentContainer = parent
         # if there is an assembly
         elif Asm4.getAssembly():
@@ -240,8 +240,7 @@ class newHole:
                 parentDoc = parentPart.Document
                 # if the solid having the edge is indeed in an App::Part
                 if parentPart and (
-                    parentPart.TypeId == "App::Part"
-                    or parentPart.TypeId == "PartDesign::Body"
+                    Asm4.isValidContainer(parentPart)
                 ):
                     # check whether there is already a similar datum, and increment the instance number
                     instanceNum = 1
